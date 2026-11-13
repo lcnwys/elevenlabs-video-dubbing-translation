@@ -1,4 +1,4 @@
-# PanelDub
+# ElevenLabs Video Dubbing & Translation
 
 **让一段漫剧，拥有走向另一种语言的第一版配音。**
 
