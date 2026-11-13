@@ -1,4 +1,4 @@
-# ElevenLabs Video Dubbing & Translation
+# ElevenLabs-Video-Dubbing-Translation
 
 **Give a motion-comic scene its first voice in another language.**
 
