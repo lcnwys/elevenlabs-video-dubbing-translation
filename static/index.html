@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>视频翻译配音 · Dubbing v2 Demo</title>
+<style>
+:root { color-scheme:light dark; --bg:#f5f7fa; --panel:#fff; --text:#192435; --muted:#5c697b; --border:#d8dfe8; --soft:#eef2f7; --accent:#2563eb; --error:#a32727; --success:#17694b; }
+@media(prefers-color-scheme:dark) { :root { --bg:#121820; --panel:#1e2630; --text:#edf2f7; --muted:#a4b0be; --border:#3a4654; --soft:#273240; --accent:#81abff; --error:#ff9696; --success:#7cddb1; } }
+* { box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",Arial,sans-serif; margin:0; }
+main { max-width:1060px; padding:28px 20px 56px; margin:0 auto; }
+header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:14px; padding-bottom:20px; }
+h1 { font-size:23px; line-height:1.3; margin:0 0 6px; letter-spacing:-.3px; }
+h2 { font-size:16px; margin:0 0 12px; }
+p { margin:0 0 12px; }
+.small { color:var(--muted); font-size:12px; }
+.mode { border:1px solid var(--border); border-radius:20px; padding:5px 11px; font-size:12px; background:var(--soft); }
+.layout { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); gap:16px; }
+.panel { padding:21px; border:1px solid var(--border); background:var(--panel); border-radius:12px; min-width:0; }
+.input-area { border:1.5px dashed var(--border); padding:24px 16px; border-radius:10px; text-align:center; background:var(--soft); cursor:pointer; }
+.input-area:hover { border-color:var(--accent); }
+.input-area strong { display:block; font-size:15px; }
+.input-area input { display:none; }
+.controls { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:18px 0 15px; }
+label.label { display:block; font-weight:600; margin-bottom:6px; }
+select { width:100%; color:var(--text); background:var(--panel); padding:10px 9px; border-radius:8px; border:1px solid var(--border); font:inherit; }
+.check { display:flex; align-items:center; gap:8px; margin:2px 0 18px; }
+input[type=checkbox] { accent-color:var(--accent); width:16px; height:16px; }
+button, .linkbtn { font:inherit; font-weight:600; border:0; cursor:pointer; border-radius:8px; padding:10px 15px; background:var(--accent); color:#fff; text-decoration:none; text-align:center; display:inline-block; }
+button:disabled { opacity:.55; cursor:not-allowed; }
+button.secondary,.linkbtn { color:var(--text); background:var(--soft); border:1px solid var(--border); }
+.actions { display:flex; flex-wrap:wrap; gap:9px; }
+.note { border-left:3px solid var(--accent); padding:8px 11px; background:var(--soft); color:var(--muted); font-size:12px; margin:14px 0 0; }
+.notice { background:var(--soft); padding:12px; border-radius:9px; color:var(--muted); font-size:13px; margin-bottom:15px; }
+.notice.warn { border-left:3px solid #d99e36; }
+.progress { background:var(--soft); border-radius:20px; height:9px; overflow:hidden; margin:12px 0 8px; }
+.progress div { width:0; height:100%; background:var(--accent); transition:width .25s; }
+.meta { display:grid; grid-template-columns:115px 1fr; gap:7px; margin:14px 0; }
+.meta dt { color:var(--muted); }
+.meta dd { margin:0; overflow-wrap:anywhere; }
+.error { color:var(--error); background:var(--soft); border-radius:7px; padding:10px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.success { color:var(--success); }
+video { width:100%; max-height:390px; background:#000; border-radius:9px; margin:9px 0 12px; }
+.hidden { display:none !important; }
+.steps { display:flex; justify-content:space-between; gap:7px; flex-wrap:wrap; margin:14px 0; color:var(--muted); font-size:12px; }
+.step { padding:5px 8px; border:1px solid var(--border); border-radius:20px; }
+.step.active { border-color:var(--accent); color:var(--text); }
+footer { padding-top:20px; color:var(--muted); font-size:12px; }
+a { color:var(--accent); }
+@media(max-width:760px) { .layout { grid-template-columns:1fr; } main { padding:20px 12px; } .panel { padding:16px; } }
+</style>
+</head>
+<body><main>
+<header>
+ <div><h1>视频翻译配音工作台</h1><div class="small">ElevenLabs Dubbing v2 + FFmpeg · 视频原画面保留 · 配音与字幕输出</div></div>
+ <div id="mode" class="mode">正在读取配置…</div>
+</header>
+<div class="layout">
+ <section class="panel">
+  <h2>01 · 创建翻译配音任务</h2>
+  <div id="modeNotice" class="notice">正在连接本地服务…</div>
+  <form id="form">
+   <label class="input-area" id="drop">
+    <strong id="fileName">点击选择或拖放视频</strong>
+    <span class="small" id="fileHelp">MP4 / MOV / MKV / WebM</span>
+    <input type="file" id="file" accept=".mp4,.mov,.mkv,.webm,video/*" required>
+   </label>
+   <div class="controls">
+    <div><label class="label" for="source">原视频语言</label><select id="source"></select></div>
+    <div><label class="label" for="target">配音目标语言</label><select id="target"></select></div>
+   </div>
+   <label class="check"><input type="checkbox" id="burn" checked> 将翻译字幕烧录到输出视频</label>
+   <div class="actions"><button id="submit" type="submit">开始配音翻译</button></div>
+  </form>
+  <div class="note">真实模式在上传并创建 Dubbing v2 项目时可能立即产生费用。请仅上传有权处理、翻译和配音的视频。为了保留原画质，本工具使用原视频画面与 ElevenLabs 配音音轨重新合成；原始音轨会被替换。</div>
+ </section>
+ <section class="panel" aria-live="polite">
+  <h2>02 · 任务状态与交付</h2>
+  <div id="empty" class="small">提交视频后，任务状态和下载链接显示在这里。刷新页面后可恢复本机最近一次任务。</div>
+  <div id="jobArea" class="hidden">
+   <div id="state" style="font-weight:650"></div>
+   <div id="message" class="small"></div>
+   <div class="progress"><div id="progress"></div></div>
+   <div class="small" id="pct">0%</div>
+   <div class="steps" id="steps">
+    <span class="step" data-step="preparing">源视频识别</span>
+    <span class="step" data-step="dubbing">多语言配音</span>
+    <span class="step" data-step="rendering">字幕与视频合成</span>
+    <span class="step" data-step="completed">交付</span>
+   </div>
+   <dl class="meta">
+    <dt>视频时长</dt><dd id="duration">—</dd>
+    <dt>目标语言</dt><dd id="targetName">—</dd>
+    <dt>ElevenLabs 项目</dt><dd id="projectId">—</dd>
+   </dl>
+   <div id="warning" class="notice warn hidden"></div>
+   <div id="error" class="error hidden"></div>
+   <button id="resume" class="secondary hidden" type="button">继续查询现有任务（不重新创建）</button>
+   <div id="results" class="hidden">
+    <video id="preview" controls playsinline preload="metadata"></video>
+    <div class="actions" id="downloads"></div>
+    <p class="small" style="margin-top:12px">字幕可单独导出 VTT / SRT；可选择关闭烧录，以便由产品侧自定义字幕样式。</p>
+   </div>
+  </div>
+ </section>
+</div>
+<footer>本工具为单机演示，不包含用户登录、队列限流、云存储生命周期管理或正式商用计费系统。相关 API：<a href="https://elevenlabs.io/docs/api-reference/dubbing/create-project" target="_blank" rel="noopener">Create project</a> · <a href="https://elevenlabs.io/docs/api-reference/dubbing/language-targets/get-language-target" target="_blank" rel="noopener">Get language target</a></footer>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const statusMap = { queued:'已排队', preparing:'源视频识别中', dubbing:'翻译配音中', rendering:'正在合成 MP4', completed:'处理完成', failed:'任务失败', interrupted:'任务已中断' };
+let config = null, currentId = null, pollTimer = null, lastStatus = null;
+function setText(id,value){ $(id).textContent = String(value ?? '—'); }
+function show(id,value=true){ $(id).classList.toggle('hidden',!value); }
+async function api(url,options){
+ const r = await fetch(url, options);
+ let j; try { j = await r.json(); } catch { throw new Error('服务返回内容无法解析'); }
+ if (!r.ok) throw new Error(typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail || j));
+ return j;
+}
+function render(job){
+ currentId = job.id; lastStatus = job.status;
+ show('empty',false); show('jobArea');
+ setText('state',statusMap[job.status] || job.status);
+ setText('message', job.message || '');
+ $('progress').style.width = `${job.progress || 0}%`;
+ setText('pct', `${job.progress || 0}%`);
+ setText('duration', `${job.duration || 0} 秒`);
+ setText('targetName', config?.languages[job.target_language] || job.target_language);
+ setText('projectId', job.project_id || (config?.demo_mode ? '本地模拟（无上游任务）' : '尚未创建'));
+ for(const el of $('steps').children) el.classList.toggle('active',el.dataset.step===job.status || (job.status==='completed' && el.dataset.step==='completed'));
+ show('warning',!!job.warning); if(job.warning) setText('warning',job.warning);
+ show('error',!!job.error); if(job.error) setText('error',job.error);
+ show('resume',(job.status==='failed'||job.status==='interrupted') && (!!job.project_id || !!config?.demo_mode));
+ show('results', job.status === 'completed');
+ if(job.status === 'completed'){
+   const preview = `/api/jobs/${job.id}/preview`;
+   if($('preview').getAttribute('src') !== preview) $('preview').setAttribute('src',preview);
+   const container = $('downloads'); container.replaceChildren();
+   for(const [kind,name] of [['video','下载 MP4 成片'],['audio','下载配音 FLAC'],['vtt','下载 WebVTT'],['srt','下载 SRT']]){
+     if(!(job.outputs || {})[kind]) continue;
+     const a=document.createElement('a'); a.className='linkbtn'; a.href=`/api/jobs/${job.id}/download/${kind}`; a.textContent=name; a.download=''; container.append(a);
+   }
+ }
+ $('submit').disabled = ['queued','preparing','dubbing','rendering'].includes(job.status);
+ if(['completed','failed','interrupted'].includes(job.status) && pollTimer){ clearInterval(pollTimer); pollTimer=null; }
+}
+function startPoll(){
+ if(pollTimer) clearInterval(pollTimer);
+ pollTimer=setInterval(async()=>{
+   if(!currentId) return;
+   try{ render(await api(`/api/jobs/${currentId}`)); }
+   catch(err){ setText('message',`网络异常：${err.message}，将继续查询`); }
+ },3000);
+}
+function setFile(file){
+ if(!file) return;
+ if(!$('file').files.length || $('file').files[0]!==file){
+   const dt=new DataTransfer(); dt.items.add(file); $('file').files=dt.files;
+ }
+ setText('fileName',file.name);
+ setText('fileHelp',`${(file.size/1048576).toFixed(1)} MB`);
+}
+$('file').addEventListener('change',()=>setFile($('file').files[0]));
+$('drop').addEventListener('dragover',e=>{e.preventDefault();});
+$('drop').addEventListener('drop',e=>{e.preventDefault();setFile(e.dataTransfer.files[0]);});
+$('form').addEventListener('submit',async e=>{
+ e.preventDefault(); const f=$('file').files[0]; if(!f) return;
+ if($('source').value === $('target').value){ alert('源语言和目标语言不能相同'); return; }
+ const question=config?.demo_mode ? '现在创建本地模拟任务（不会调用 ElevenLabs）？' : '创建真实 Dubbing v2 项目会产生上游费用。确定提交吗？';
+ if(!window.confirm(question)) return;
+ $('submit').disabled=true; show('error',false);
+ try{
+   const data=new FormData(); data.append('file',f); data.append('source_language',$('source').value);
+   data.append('target_language',$('target').value); data.append('burn_subtitles',String($('burn').checked));
+   const job=await api('/api/jobs',{method:'POST',body:data});
+   localStorage.setItem('lastDubJob',job.id); render(job); startPoll();
+ }catch(err){ show('jobArea',true); show('empty',false); show('error',true); setText('error',err.message); $('submit').disabled=false; }
+});
+$('resume').addEventListener('click', async()=>{
+ try { const job=await api(`/api/jobs/${currentId}/resume`,{method:'POST'}); render(job); startPoll(); }
+ catch(err){ show('error'); setText('error',err.message); }
+});
+(async()=>{
+ try{
+   config=await api('/api/config');
+   $('mode').textContent=config.demo_mode ? '本地模拟 · 免费' : (config.api_configured ? '真实 API 模式' : '等待配置 API Key');
+   $('modeNotice').textContent=config.demo_mode ? '当前处于本地模拟模式：只验证上传、FFmpeg 合成及下载，不会产生翻译、真实配音或 ElevenLabs 费用。' : (config.api_configured ? '已启用真实 Dubbing v2 接口。提交项目即可能计费，确认前请检查视频与目标语言。' : '请在服务端 .env 配置 ELEVENLABS_API_KEY 后重启服务；或设置 DEMO_MODE=true 试运行本地流程。');
+   setText('fileHelp',`MP4 / MOV / MKV / WebM · 最多 ${config.max_upload_mb} MB · ${config.max_duration_sec} 秒`);
+   for(const [code,label] of Object.entries(config.languages)){
+     for(const id of ['source','target']) { const op=document.createElement('option'); op.value=code; op.textContent=`${label} (${code})`; $(id).append(op); }
+   }
+   const auto=document.createElement('option'); auto.value='auto'; auto.textContent='自动识别'; $('source').prepend(auto);
+   $('source').value='zh'; $('target').value='en';
+   const last=localStorage.getItem('lastDubJob'); if(last && /^[a-f0-9]{32}$/.test(last)){
+     try{const j=await api(`/api/jobs/${last}`); render(j); if(!['completed','failed','interrupted'].includes(j.status)) startPoll();}catch{}
+   }
+ }catch(err){ setText('mode','本地服务错误'); setText('modeNotice',err.message); }
+})();
+</script>
+</body></html>
