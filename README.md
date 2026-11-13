@@ -1,82 +1,211 @@
-# ElevenLabs Dubbing v2 + FFmpeg 视频翻译配音 Demo
+# PanelDub
 
-面向短视频、漫剧、常规视频的**独立、单机** Web Demo。后端 Python FastAPI，前端单文件 HTML，视频合成使用 FFmpeg。
+**Give a motion-comic scene its first voice in another language.**
 
-## 支持能力
+English · [简体中文](README.zh-CN.md) · Built with ElevenLabs Dubbing v2 + FFmpeg
 
-- 上传 MP4 / MOV / MKV / WebM（文件需要有音轨），选择原语言和翻译目标语言
-- 创建 **Dubbing v2** 项目并直接排队首个目标语言（避免重复支付首个目标语言费用）
-- 查询项目转录状态及目标语言配音状态（轮询，Demo 不需要 webhook）
-- 下载上游的配音 FLAC 和 WebVTT；本地将 WebVTT 转成 SRT
-- 保留**源视频画面**，将配音音轨与视频合成；可选将字幕直接烧录到 MP4
-- MP4 预览、MP4 / FLAC / VTT / SRT 下载、失败提示、状态持久化
-- 中断后通过“继续查询”复用**已有**上游项目，避免因为重新上传重复收费
-- 本地模拟模式可以在**不消耗 ElevenLabs 费用**的情况下验证 FFmpeg 全流程（模拟音轨是提示音，不是翻译配音）
+PanelDub is a locally hosted video translation and dubbing workflow: upload a clip, choose a language, wait for the dub, then preview and download video, audio, and subtitles. Make a reviewable multilingual pilot before committing to a larger localization workflow.
 
-## 运行环境
+## Why creators might use it
 
-- Python 3.10+
-- `ffmpeg` 和 `ffprobe` 在系统 PATH 中，FFmpeg 需要 `libx264` 和 `libass`（字幕滤镜）
-- ElevenLabs API Key（真实模式；具有 Dubbing 调用权限、足够额度）
+| Scenario | Outcome |
+|---|---|
+| Motion comics / animated panels | A target-language dub to listen to and review |
+| Short dramas / narrative clips | A short pilot to evaluate language and performance |
+| Tutorials / product films | Bring existing visuals to an audience in another language |
+| Localization prototyping | Explore upload, transcription, language jobs, downloads, and local rendering |
 
-安装（macOS：`brew install ffmpeg`；Ubuntu：`sudo apt-get install ffmpeg`）：
+This does not alter lip movements or guarantee release-ready translation, character performance, or subtitle timing. Native-language review and listening checks remain part of publishing.
+
+## Features & deliverables
+
+- MP4 / MOV / MKV / WebM input with an audio track.
+- Dubbing v2 project creation with the first target language queued immediately, followed by status polling.
+- FLAC dub download; WebVTT when returned upstream, plus SRT conversion with FFmpeg.
+- Original visual content composited with the new audio into MP4, with optional burned-in subtitles.
+- Local job persistence and a resume-query action that reuses an existing upstream project.
+- `DEMO_MODE=true` for local workflow checks; it generates a test tone, not a translation.
+
+| Output | Description |
+|---|---|
+| MP4 | H.264 video with dubbed audio and optional burned-in subtitles |
+| FLAC | Upstream-generated dub |
+| VTT / SRT | Available only when the upstream service returns subtitles |
+
+> The application UI is currently primarily in Chinese; this README provides English setup and workflow instructions.
+
+## Stack & requirements
+
+| Layer | Implementation |
+|---|---|
+| Frontend | Single-file HTML / CSS / JavaScript |
+| Backend | Python, FastAPI, Uvicorn, Pydantic |
+| API client | Requests → ElevenLabs Dubbing v2 |
+| Configuration | python-dotenv and process environment |
+| Media | FFmpeg / ffprobe; `libx264` and `libass` for subtitle burning |
+| Jobs & state | Local `data/` JSON/files, in-process thread pool, polling; no external database |
+| Recommended setup | Python 3.11 / 3.12, FFmpeg, desktop browser; macOS / Linux / Windows |
+
+## Quick start
+
+Download or clone the repository and enter its root, containing `app.py` and `requirements.txt`. The existing folder is named `elevenlabs-dubbing-demo`.
+
+### Install dependencies
+
+Use Python **3.11 or 3.12** and a separate virtual environment for this project. This is a Python application: **Node.js, npm, and an external database are not required**. Use a recent Chrome, Edge, Firefox, or Safari; media decoding depends on the browser.
+
+macOS / Linux:
 
 ```bash
-cd elevenlabs-dubbing-demo
 python3 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
-在 `.env` 中填写：
+Windows PowerShell:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+If PowerShell blocks activation, use `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` directly and use that Python executable for subsequent commands.
+
+Install FFmpeg, for example:
+
+```bash
+# macOS with Homebrew
+brew install ffmpeg
+# Ubuntu / Debian
+sudo apt-get update
+sudo apt-get install ffmpeg
+```
+
+On Windows, install FFmpeg and add its `bin` directory to PATH. Open a new terminal and check:
+
+```bash
+ffmpeg -version
+ffprobe -version
+```
+
+### Start with the API-free simulation
+
+Copy the configuration: `cp .env.example .env` on macOS / Linux, or `Copy-Item .env.example .env` in PowerShell. Edit your local `.env`:
 
 ```dotenv
-ELEVENLABS_API_KEY=你的密钥
+ELEVENLABS_API_KEY=
+DEMO_MODE=true
+```
+
+```bash
+python -m uvicorn app:app --host 127.0.0.1 --port 8000
+```
+
+Open **http://127.0.0.1:8000** and upload a 3–10 second video with audio. Simulation checks upload, progress, subtitles, and MP4 download; the output sound is a test tone.
+
+### Switch to real dubbing
+
+```dotenv
+ELEVENLABS_API_KEY=<your-elevenlabs-api-key>
 DEMO_MODE=false
 ```
 
-启动：
+Restart the service after saving. Your account needs Dubbing access and sufficient quota. Existing environment variables take precedence over `.env`.
 
-```bash
-uvicorn app:app --host 127.0.0.1 --port 8000
-```
+1. Upload footage, select a source language or automatic detection, and choose one target language.
+2. Create the job and wait for source transcription and target-language generation.
+3. Preview dialogue, voices, and subtitles before downloading deliverables.
+4. After a query timeout, resume querying before creating another paid project.
 
-浏览器访问 `http://127.0.0.1:8000`。**不要将此无登录鉴权的本地 Demo 直接对公网开放。**
+**Creating a Dubbing project incurs a minimum charge for one language, potentially before an output exists.** It covers the first language target; additional languages are billed separately. Account terms and official rules apply. See the [official project-creation documentation](https://elevenlabs.io/docs/api-reference/dubbing/create-project).
 
-不想先消费 API 时，设置 `DEMO_MODE=true` 后重启服务，用一个 3–10 秒有音轨的短视频验证 UI、字幕烧录和交付流程。模拟生成的是测试音，不是翻译结果，界面会明确提示。
+## Configuration
 
-## 真实流程
+| Variable | Default / purpose |
+|---|---|
+| `ELEVENLABS_API_KEY` | Authentication for real dubbing |
+| `DEMO_MODE` | `false`; set `true` for local simulation |
+| `DATA_DIR` | Repository `data/` by default; inputs, state, outputs |
+| `MAX_UPLOAD_MB` | `200`, local upload limit |
+| `MAX_DURATION_SEC` | `600`, local duration limit |
+| `POLL_SECONDS` | `5`, polling interval, minimum 2 seconds |
+| `POLL_TIMEOUT_SEC` | `1800`, query wait limit, minimum 60 seconds |
+| `ALLOWED_OUTPUT_HOSTS` | `storage.googleapis.com`; verify any change to the download-host allowlist |
 
-1. `POST /v1/dubbing/project`：文件上传，`model_id=dubbing_v2`，`target_language=en`，可选 `source_language`。**创建项目即可能收取至少一个目标语言的费用**。
-2. `GET /v1/dubbing/project/{project_id}`：轮询源视频转录状态，直到 `ready`（或 `failed`）。
-3. `GET /v1/dubbing/project/{project_id}/language/{language_id}`：轮询目标语言，直至 `completed`；返回 `outputs.lossless_audio` 和可能存在的 `outputs.subtitles`（签名下载 URL）。
-4. 下载配音音频与 WebVTT，FFmpeg 将字幕导出 SRT，并将原视频画面与新音轨合成 MP4；可选烧录字幕。
-5. 交付视频、音频及字幕。如果上游未返回 `outputs.subtitles`，仍交付**无字幕视频**，并明确警告，不假装字幕已生成。
+The UI offers Chinese, English, Japanese, Korean, Spanish, French, German, Portuguese, Italian, Indonesian, Thai, and Vietnamese. Listed options do not establish verified support for every account or language pair; validate with a pilot.
 
-注意：官网签名文件的主机名通过 `ALLOWED_OUTPUT_HOSTS` 白名单验证，默认 `storage.googleapis.com`；如果官方后续改用其他域名，需核对后更新配置。
+## Data & production limits
 
-## 产品边界与风险
+| Stage | Current behavior |
+|---|---|
+| Upload to local service | Source saved under Git-ignored `data/` |
+| Real dubbing project | Source video and language settings sent to ElevenLabs |
+| API key | Read on the backend; authentication headers sent to ElevenLabs API only |
+| Audio / subtitle download | Retrieved from upstream allowlisted URLs without attaching the API key |
+| Local output | FFmpeg renders and saves files; jobs are not automatically expired |
 
-- 视频中的**原始音轨会全部替换**：包括原声对话、背景音乐与音效。若奇想希望保留背景音乐和音效，需要另外增加音频分离、轨道混音，不建议简单叠加两套声音。
-- 默认用 H.264 重新编码输出视频（`libx264`），画面内容来自原视频，但不是逐位无损。默认字幕样式可在 `render_outputs()` 调整。字幕与实际嘴型同步质量需要结合真实样片验证。
-- `outputs.subtitles` 是官方返回的 WebVTT，按**源语音时间轴**定时；配音速度变化可能导致字幕和目标语音有偏差，严苛场景可增加 Forced Alignment 或 Scribe。
-- 当前最多 200 MB / 600 秒，可在 `.env` 修改。使用本地磁盘保存所有文件，**不自动清理任务**，不适合长视频或高并发生产。
-- 真实模式为轮询；正式 SaaS 建议改用 ElevenLabs 签名验证 webhook + 对象存储 + 独立任务队列 + 用户权限/频控 + 自动清理 + 成本计费。
-- 本代码没有实现账号共享、API Key 前端输入、客户用量计价；Key 仅在后端 `.env` 保存。
-- 创建项目后如果上游超时，先点击“继续查询”；不要直接重新创建项目。未创建上游项目但网络超时的极端情况仍需管理员核对 ElevenLabs 后台，以免重复计费。
+**The entire original audio track is replaced, including existing music and sound effects.** Preserving background material requires a separate separation/remixing workflow. H.264 output preserves visual content but is re-encoded, not bit-for-bit lossless. Subtitles may follow the source speech timeline and drift against translated delivery; if upstream provides none, the application warns and delivers video without subtitles.
 
-## 技术参考（官方）
+There is no automatic lip sync, subtitle editor, cloning interface, multi-user login, or production queue. No separate telemetry-upload code is included, but online dubbing uploads content and does not guarantee upstream zero retention. Use authorized media and verify commercial rights under the applicable terms.
 
-- [Dubbing v2 Create project](https://elevenlabs.io/docs/api-reference/dubbing/create-project)
-- [Get project](https://elevenlabs.io/docs/api-reference/dubbing/get-project)
-- [Get language target](https://elevenlabs.io/docs/api-reference/dubbing/language-targets/get-language-target)
-- [Dubbing quickstart](https://elevenlabs.io/docs/eleven-api/guides/cookbooks/dubbing)
+## Development & diagnostics
 
-## 运行测试
+| Path | Role |
+|---|---|
+| `app.py` | Project creation, polling, download validation, rendering, and state |
+| `static/index.html` | Upload, progress, preview, and download UI |
+| `.env.example` | Public configuration template without real keys |
+| `tests/test_demo.py` | Mocked service calls and locally generated media checks |
 
-```bash
-DEMO_MODE=true python -m pytest -q
-```
+Developer checks: `DEMO_MODE=true python -m pytest -q`. In PowerShell set `$env:DEMO_MODE="true"` first, then run `python -m pytest -q`. If pytest is not installed in the test environment, install it with `python -m pip install pytest`. Tests do not require paid API requests.
 
-集成测试使用 FFmpeg 自制测试视频，不会调用 ElevenLabs 或消耗额度。
+If a request times out before the upstream project ID is saved, inspect the ElevenLabs account before retrying creation to avoid duplicate charges. For subtitle burn-in errors, check the FFmpeg `subtitles` filter and font availability.
+
+## References
+
+- [Dubbing v2 project creation](https://elevenlabs.io/docs/api-reference/dubbing/create-project)
+- [Dubbing project status](https://elevenlabs.io/docs/api-reference/dubbing/get-project)
+- [Dubbing target-language status](https://elevenlabs.io/docs/api-reference/dubbing/language-targets/get-language-target)
+- [FFmpeg documentation](https://ffmpeg.org/documentation.html)
+
+## Local deployment & development
+
+The commands above start a **single-user service on your own machine**. Leave the terminal running and press `Ctrl+C` to stop it. To restart, enter the same directory, activate the same environment, and run the start command again. If another project uses the port, stop it or choose a different `--port`.
+
+A process manager can keep the same Uvicorn command running. Before offering this service to a team or the public, add authentication, user isolation, a job queue, usage limits, redacted logs, and file cleanup. These production deployment features are not implemented here.
+
+## Troubleshooting
+
+| Symptom | What to check |
+|---|---|
+| Missing `uvicorn` or Python module | Activate the virtual environment; run `python -m pip install -r requirements.txt` from the project root |
+| FFmpeg missing / media probe fails | Check `ffmpeg -version` and `ffprobe -version`; reopen the terminal after installation |
+| API returns 401 / 403 | Check the local key, product permissions, and account status; never paste a full key into an issue |
+| API returns 429 / generation times out | Check quota, concurrency, and network access; start with a short clip and inspect upstream job state before resubmitting |
+| Preview does not play | Check browser codec support; download the result and try a local player |
+| Environment changes do not take effect | Restart Uvicorn from the terminal where the variables are configured |
+
+## Contributing
+
+Reproduction steps, sanitized errors, and feature suggestions are welcome. A concrete case—music masking comic dialogue, subtitle drift after dubbing, or an unsuitable musical mood—is especially useful. Include OS, Python / FFmpeg versions, media format, and a minimal workflow. Confirm sharing rights before providing real media.
+
+This repository does not include a `LICENSE` yet. Public source visibility alone does not grant reuse or redistribution rights; those will be defined when the maintainer selects a license. API terms, generated-content rights, and dependency licenses apply separately.
+
+## ElevenLabs integration & pricing inquiries
+
+Maintained by an independent developer, this project gives motion-comic teams, video creators, and builders a practical way to explore ElevenLabs.
+
+Working on **motion-comic dubbing, short-drama localization, video soundtracks, sound effects, voice products, or batch API integration**? Get in touch to discuss product fit, workflow design, and integration. I can also offer **competitively priced ElevenLabs solutions**; availability, terms, and pricing depend on your requirements and an individual quotation.
+
+**Email: [lcnwys@gmail.com](mailto:lcnwys@gmail.com)**
+
+For a useful first conversation, include:
+
+- Your content or product type and a short, sanitized description of the requirement.
+- Estimated monthly audio/video minutes, target languages, team size, and API needs.
+- Whether you are testing a pilot or preparing a launch.
+
+Do not send API keys, passwords, or unauthorized customer media by email or in public issues. Use issues for product feedback and email for commercial inquiries.
+
+> An independent community project, not an official ElevenLabs product. Inquiries and quotations do not imply official endorsement. ElevenLabs names and trademarks belong to their respective owners.
