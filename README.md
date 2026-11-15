@@ -1,60 +1,93 @@
 # ElevenLabs-Video-Dubbing-Translation
 
-**Give a motion-comic scene its first voice in another language.**
+**AI 漫剧翻译配音与短视频多语言制作｜先做一段能评审的漫剧译配样片，再决定如何制作更多语言版本。**
 
-English · [简体中文](README.zh-CN.md) · Built with ElevenLabs Dubbing v2 + FFmpeg
+简体中文（默认） · [English](README.en.md) · 基于 ElevenLabs Dubbing v2 + FFmpeg
 
-PanelDub is a locally hosted video translation and dubbing workflow: upload a clip, choose a language, wait for the dub, then preview and download video, audio, and subtitles. Make a reviewable multilingual pilot before committing to a larger localization workflow.
+PanelDub 是本地运行的视频翻译配音工作流：上传片段、选择语言、等待配音，然后预览并下载视频、音频和字幕。适合先做一个可评审的多语言样片，再决定后续制作与出海流程。
 
-## Why creators might use it
+面向中国境内的 AI 视频创作者、AI 漫剧团队、动态漫画作者、短剧后期与独立开发者。用可运行、可二次开发的小工具，探索 ElevenLabs 的配乐、音效、语音与译配能力。画面可来自你已有的拍摄、动画或 AI 视频流程；本工具负责其文档所述的声音环节。
 
-| Scenario | Outcome |
+中文文档优先，界面目前以中文为主。可从内置样例、离线草案或模拟模式开始；具体可用方式见下文。
+
+## AI 视频与漫剧实战场景
+
+| 你在做什么 | 建议从哪里开始 | 如何评审 |
+|---|---|---|
+| 中文 AI 漫剧，想测试其他语言 | 选一段人物和对白清楚的 10–30 秒片段 | 检查人名、称呼、情绪及角色辨识度 |
+| AI 短剧或剧情预告 | 先试一个目标语言，不要直接整批重建项目 | 请母语审校人员核对关键台词 |
+| 产品演示或教程本地化 | 先测试含术语和操作说明的片段 | 确认专业词汇与字幕可读性 |
+| 想接到自研视频工具 | 阅读创建项目、轮询、下载与 FFmpeg 合成逻辑 | 补齐任务追踪、权限与用量管理 |
+
+### 漫剧译配前准备什么
+
+| 材料 | 用途 |
 |---|---|
-| Motion comics / animated panels | A target-language dub to listen to and review |
-| Short dramas / narrative clips | A short pilot to evaluate language and performance |
-| Tutorials / product films | Bring existing visuals to an audience in another language |
-| Localization prototyping | Explore upload, transcription, language jobs, downloads, and local rendering |
+| 有权处理的源视频 | 用于真实上传与配音，建议先使用短样片 |
+| 角色名、关系与术语表 | 供人工评审；当前界面不会自动把自定义术语表提交上游 |
+| 目标语言与观众定位 | 判断口语、称呼、语气是否适合受众 |
+| 背景音乐 / 音效分轨 | 如需保留，另做混音；本工具会替换原始整条音轨 |
 
-This does not alter lip movements or guarantee release-ready translation, character performance, or subtitle timing. Native-language review and listening checks remain part of publishing.
+翻译完成后要复核；当前项目不提供自动口型修改或发行级质量保证。
 
-## Features & deliverables
+## 为创作者解决什么问题
 
-- MP4 / MOV / MKV / WebM input with an audio track.
-- Dubbing v2 project creation with the first target language queued immediately, followed by status polling.
-- FLAC dub download; WebVTT when returned upstream, plus SRT conversion with FFmpeg.
-- Original visual content composited with the new audio into MP4, with optional burned-in subtitles.
-- Local job persistence and a resume-query action that reuses an existing upstream project.
-- `DEMO_MODE=true` for local workflow checks; it generates a test tone, not a translation.
-
-| Output | Description |
+| 创作场景 | 可以获得什么 |
 |---|---|
-| MP4 | H.264 video with dubbed audio and optional burned-in subtitles |
-| FLAC | Upstream-generated dub |
-| VTT / SRT | Available only when the upstream service returns subtitles |
+| 漫剧 / 动态漫画出海 | 一个可试听、可复核的目标语言配音版本 |
+| 短剧 / 剧情短视频 | 先用短片段验证语言与配音方向 |
+| 教程 / 产品展示 | 把同一段画面交给另一种语言的观众 |
+| 译配流程研发 | 理解上传、转录、目标语言任务、音频下载与本地合成如何连接 |
 
-> The application UI is currently primarily in Chinese; this README provides English setup and workflow instructions.
+它不自动改口型，也不保证翻译、角色演绎或字幕时间轴达到发行标准。发布前仍需要母语审校和实际试听。
 
-## Stack & requirements
+## 功能与交付
 
-| Layer | Implementation |
+- 支持 MP4 / MOV / MKV / WebM，输入需含音轨。
+- 创建 Dubbing v2 项目时直接排队首个目标语言，轮询项目和配音状态。
+- 下载配音 FLAC；上游返回字幕时提供 WebVTT，并用 FFmpeg 转换 SRT。
+- 保留原视频画面内容，用新音轨合成 MP4，可选把字幕烧录进视频。
+- 任务状态保存在本地；中断后可用“继续查询”复用已有上游项目。
+- 可用 `DEMO_MODE=true` 验证本地流程，模拟音轨是提示音，不是真实翻译。
+
+| 输出 | 说明 |
 |---|---|
-| Frontend | Single-file HTML / CSS / JavaScript |
-| Backend | Python, FastAPI, Uvicorn, Pydantic |
-| API client | Requests → ElevenLabs Dubbing v2 |
-| Configuration | python-dotenv and process environment |
-| Media | FFmpeg / ffprobe; `libx264` and `libass` for subtitle burning |
-| Jobs & state | Local `data/` JSON/files, in-process thread pool, polling; no external database |
-| Recommended setup | Python 3.11 / 3.12, FFmpeg, desktop browser; macOS / Linux / Windows |
+| MP4 | H.264 视频 + 配音音轨，可选烧录字幕 |
+| FLAC | 上游生成的配音音频 |
+| VTT / SRT | 仅在上游实际返回字幕时提供 |
 
-## Quick start
+界面目前以中文为主；本仓库提供中英文文档，尚未提供完整英文界面。
 
-Download or clone the repository and enter its root, containing `app.py` and `requirements.txt`. The existing folder is named `elevenlabs-dubbing-demo`.
+## 技术栈与配套环境
 
-### Install dependencies
+| 层 | 实现 |
+|---|---|
+| 前端 | 单文件 HTML / CSS / JavaScript |
+| 后端 | Python、FastAPI、Uvicorn、Pydantic |
+| 外部请求 | Requests → ElevenLabs Dubbing v2 |
+| 配置 | python-dotenv + 进程环境变量 |
+| 媒体 | FFmpeg / ffprobe，需 `libx264` 与字幕烧录用的 `libass` |
+| 状态与任务 | 本地 `data/` JSON / 文件、进程内线程池和轮询；无外部数据库 |
+| 推荐环境 | Python 3.11 / 3.12、FFmpeg、桌面浏览器；macOS / Linux / Windows |
 
-Use Python **3.11 or 3.12** and a separate virtual environment for this project. This is a Python application: **Node.js, npm, and an external database are not required**. Use a recent Chrome, Edge, Firefox, or Safari; media decoding depends on the browser.
+## 快速开始
 
-macOS / Linux:
+下载或克隆仓库，进入含 `app.py`、`requirements.txt` 的根目录。现有文件夹名称为 `elevenlabs-dubbing-demo`。
+
+### 下载项目
+
+```bash
+git clone https://github.com/lcnwys/elevenlabs-video-dubbing-translation.git
+cd elevenlabs-video-dubbing-translation
+```
+
+也可在仓库页面选择 Code → Download ZIP，解压后进入包含 `requirements.txt` 的目录。安装命令均在该目录执行。
+
+### 安装依赖
+
+建议 Python **3.11 或 3.12**，并为每个项目单独建立虚拟环境。本项目是 Python 应用，**不需要 Node.js、npm 或独立数据库**。建议使用较新的 Chrome、Edge、Firefox 或 Safari；实际媒体解码能力取决于浏览器。
+
+macOS / Linux：
 
 ```bash
 python3 -m venv .venv
@@ -62,7 +95,7 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-Windows PowerShell:
+Windows PowerShell：
 
 ```powershell
 py -3.11 -m venv .venv
@@ -70,28 +103,28 @@ py -3.11 -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-If PowerShell blocks activation, use `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` directly and use that Python executable for subsequent commands.
+如果 PowerShell 的执行策略不允许激活，可直接使用 `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`，后续启动命令也使用该 Python 路径。
 
-Install FFmpeg, for example:
+FFmpeg 安装示例：
 
 ```bash
-# macOS with Homebrew
+# macOS（已安装 Homebrew）
 brew install ffmpeg
 # Ubuntu / Debian
 sudo apt-get update
 sudo apt-get install ffmpeg
 ```
 
-On Windows, install FFmpeg and add its `bin` directory to PATH. Open a new terminal and check:
+Windows 请安装 FFmpeg 并将其 `bin` 目录加入 PATH。新开终端后确认：
 
 ```bash
 ffmpeg -version
 ffprobe -version
 ```
 
-### Start with the API-free simulation
+### 先跑不消耗 API 的模拟模式
 
-Copy the configuration: `cp .env.example .env` on macOS / Linux, or `Copy-Item .env.example .env` in PowerShell. Edit your local `.env`:
+复制示例配置：macOS / Linux 使用 `cp .env.example .env`，PowerShell 使用 `Copy-Item .env.example .env`。编辑本机 `.env`：
 
 ```dotenv
 ELEVENLABS_API_KEY=
@@ -102,110 +135,151 @@ DEMO_MODE=true
 python -m uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
-Open **http://127.0.0.1:8000** and upload a 3–10 second video with audio. Simulation checks upload, progress, subtitles, and MP4 download; the output sound is a test tone.
+打开 **http://127.0.0.1:8000**，上传一段 3–10 秒、有音轨的视频。模拟模式用于检查上传、状态更新、字幕烧录和 MP4 下载；声音为测试提示音。
 
-### Switch to real dubbing
+### 切换真实配音
 
 ```dotenv
 ELEVENLABS_API_KEY=<your-elevenlabs-api-key>
 DEMO_MODE=false
 ```
 
-Restart the service after saving. Your account needs Dubbing access and sufficient quota. Existing environment variables take precedence over `.env`.
+保存后重启服务。账号需有 Dubbing 权限和可用额度。已有终端环境变量会优先于 `.env`。
 
-1. Upload footage, select a source language or automatic detection, and choose one target language.
-2. Create the job and wait for source transcription and target-language generation.
-3. Preview dialogue, voices, and subtitles before downloading deliverables.
-4. After a query timeout, resume querying before creating another paid project.
+1. 上传视频，选择原语言或自动检测，以及一个目标语言。
+2. 创建任务并等待源视频转录和目标语言配音完成。
+3. 预览、检查台词、音色和字幕，再下载交付物。
+4. 查询超时先用“继续查询”，避免重复创建付费项目。
 
-**Creating a Dubbing project incurs a minimum charge for one language, potentially before an output exists.** It covers the first language target; additional languages are billed separately. Account terms and official rules apply. See the [official project-creation documentation](https://elevenlabs.io/docs/api-reference/dubbing/create-project).
+**创建 Dubbing 项目即产生至少一种语言的最低收费，可能在输出产生之前发生。**首个目标语言由该费用覆盖，额外语言单独计费，实际以账号和官方规则为准。参见 [官方创建项目说明](https://elevenlabs.io/docs/api-reference/dubbing/create-project)。
 
-## Configuration
+## 配置项
 
-| Variable | Default / purpose |
+| 变量 | 默认值 / 用途 |
 |---|---|
-| `ELEVENLABS_API_KEY` | Authentication for real dubbing |
-| `DEMO_MODE` | `false`; set `true` for local simulation |
-| `DATA_DIR` | Repository `data/` by default; inputs, state, outputs |
-| `MAX_UPLOAD_MB` | `200`, local upload limit |
-| `MAX_DURATION_SEC` | `600`, local duration limit |
-| `POLL_SECONDS` | `5`, polling interval, minimum 2 seconds |
-| `POLL_TIMEOUT_SEC` | `1800`, query wait limit, minimum 60 seconds |
-| `ALLOWED_OUTPUT_HOSTS` | `storage.googleapis.com`; verify any change to the download-host allowlist |
+| `ELEVENLABS_API_KEY` | 真实模式认证 Key |
+| `DEMO_MODE` | `false`；设 `true` 使用本地模拟 |
+| `DATA_DIR` | 默认项目根目录 `data/`，保存输入、状态与输出 |
+| `MAX_UPLOAD_MB` | `200`，本地上传大小限制 |
+| `MAX_DURATION_SEC` | `600`，本地素材时长限制 |
+| `POLL_SECONDS` | `5`，轮询间隔，最小 2 秒 |
+| `POLL_TIMEOUT_SEC` | `1800`，查询等待上限，最小 60 秒 |
+| `ALLOWED_OUTPUT_HOSTS` | `storage.googleapis.com`，下载输出的主机白名单；变更前需核实 |
 
-The UI offers Chinese, English, Japanese, Korean, Spanish, French, German, Portuguese, Italian, Indonesian, Thai, and Vietnamese. Listed options do not establish verified support for every account or language pair; validate with a pilot.
+当前界面提供中文、英语、日语、韩语、西班牙语、法语、德语、葡萄牙语、意大利语、印尼语、泰语、越南语选项。界面列出语言不代表你的账号对所有组合都已验收，真实支持仍需用样片检查。
 
-## Data & production limits
+## 数据与制作边界
 
-| Stage | Current behavior |
+| 环节 | 当前行为 |
 |---|---|
-| Upload to local service | Source saved under Git-ignored `data/` |
-| Real dubbing project | Source video and language settings sent to ElevenLabs |
-| API key | Read on the backend; authentication headers sent to ElevenLabs API only |
-| Audio / subtitle download | Retrieved from upstream allowlisted URLs without attaching the API key |
-| Local output | FFmpeg renders and saves files; jobs are not automatically expired |
+| 上传到本地服务 | 源视频写入 `data/`，Git 已忽略该目录 |
+| 创建真实配音 | 源视频及语言参数发送给 ElevenLabs |
+| API Key | 后端读取本机配置，仅向 ElevenLabs API 发送认证头 |
+| 下载配音 / 字幕 | 从上游返回的白名单地址下载，不向下载地址附带 API Key |
+| 本地输出 | FFmpeg 合成并保存；任务没有自动过期清理 |
 
-**The entire original audio track is replaced, including existing music and sound effects.** Preserving background material requires a separate separation/remixing workflow. H.264 output preserves visual content but is re-encoded, not bit-for-bit lossless. Subtitles may follow the source speech timeline and drift against translated delivery; if upstream provides none, the application warns and delivers video without subtitles.
+**原始音轨会被整条替换，包括其中的音乐和音效。**需要保留背景时，应另建音频分离与重混流程。输出视频默认 H.264 重编码，画面内容保留，但不是逐位无损。字幕可能基于源语音时间轴，目标配音速度变化时需要人工检查；上游没有字幕时会交付无字幕视频并提示。
 
-There is no automatic lip sync, subtitle editor, cloning interface, multi-user login, or production queue. No separate telemetry-upload code is included, but online dubbing uploads content and does not guarantee upstream zero retention. Use authorized media and verify commercial rights under the applicable terms.
+没有自动口型同步、字幕编辑器、声音克隆界面、多用户账号或生产级队列。代码没有独立遥测上报，但在线配音会上传内容，也不承诺上游零留存。请只处理获得授权的音视频；生成内容商用权限以实际授权和服务条款为准。
 
-## Development & diagnostics
+## 开发与排障
 
-| Path | Role |
+| 路径 | 职责 |
 |---|---|
-| `app.py` | Project creation, polling, download validation, rendering, and state |
-| `static/index.html` | Upload, progress, preview, and download UI |
-| `.env.example` | Public configuration template without real keys |
-| `tests/test_demo.py` | Mocked service calls and locally generated media checks |
+| `app.py` | 项目创建、轮询、下载校验、FFmpeg 合成、任务状态 |
+| `static/index.html` | 上传、状态、预览与下载 UI |
+| `.env.example` | 可公开的配置模板，不含真实 Key |
+| `tests/test_demo.py` | 使用模拟接口与本地生成素材的流程测试 |
 
-Developer checks: `DEMO_MODE=true python -m pytest -q`. In PowerShell set `$env:DEMO_MODE="true"` first, then run `python -m pytest -q`. If pytest is not installed in the test environment, install it with `python -m pip install pytest`. Tests do not require paid API requests.
+开发检查：`DEMO_MODE=true python -m pytest -q`。Windows 可先设 `$env:DEMO_MODE="true"` 再执行 `python -m pytest -q`。如果测试环境尚未安装 pytest，先在虚拟环境中执行 `python -m pip install pytest`；测试不需要付费 API。
 
-If a request times out before the upstream project ID is saved, inspect the ElevenLabs account before retrying creation to avoid duplicate charges. For subtitle burn-in errors, check the FFmpeg `subtitles` filter and font availability.
+若上游超时且本地尚未保存项目 ID，先核对 ElevenLabs 后台再重建，避免重复收费。烧录字幕失败时检查 FFmpeg 是否包含 `subtitles` 滤镜及字体支持。
 
-## References
+## 参考
 
-- [Dubbing v2 project creation](https://elevenlabs.io/docs/api-reference/dubbing/create-project)
-- [Dubbing project status](https://elevenlabs.io/docs/api-reference/dubbing/get-project)
-- [Dubbing target-language status](https://elevenlabs.io/docs/api-reference/dubbing/language-targets/get-language-target)
-- [FFmpeg documentation](https://ffmpeg.org/documentation.html)
+- [Dubbing v2 创建项目](https://elevenlabs.io/docs/api-reference/dubbing/create-project)
+- [Dubbing 项目状态](https://elevenlabs.io/docs/api-reference/dubbing/get-project)
+- [Dubbing 目标语言状态](https://elevenlabs.io/docs/api-reference/dubbing/language-targets/get-language-target)
+- [FFmpeg 文档](https://ffmpeg.org/documentation.html)
 
-## Local deployment & development
+## 本地部署与二次开发
 
-The commands above start a **single-user service on your own machine**. Leave the terminal running and press `Ctrl+C` to stop it. To restart, enter the same directory, activate the same environment, and run the start command again. If another project uses the port, stop it or choose a different `--port`.
+以上命令启动的是**本机单用户服务**。终端保持运行即可使用，按 `Ctrl+C` 停止；重启时进入同一目录，激活同一虚拟环境，再执行启动命令。不同项目使用相同端口时，请停止前一个服务，或把 `--port` 改为未占用端口。
 
-A process manager can keep the same Uvicorn command running. Before offering this service to a team or the public, add authentication, user isolation, a job queue, usage limits, redacted logs, and file cleanup. These production deployment features are not implemented here.
+如需让服务长期运行，可由进程管理器管理同一条 Uvicorn 命令。正式向团队或公网提供服务之前，需要增加身份认证、用户数据隔离、任务队列、用量限制、日志脱敏和文件清理。当前仓库没有实现这些生产部署能力。
 
-## Troubleshooting
+## 常见问题
 
-| Symptom | What to check |
+| 问题 | 排查方向 |
 |---|---|
-| Missing `uvicorn` or Python module | Activate the virtual environment; run `python -m pip install -r requirements.txt` from the project root |
-| FFmpeg missing / media probe fails | Check `ffmpeg -version` and `ffprobe -version`; reopen the terminal after installation |
-| API returns 401 / 403 | Check the local key, product permissions, and account status; never paste a full key into an issue |
-| API returns 429 / generation times out | Check quota, concurrency, and network access; start with a short clip and inspect upstream job state before resubmitting |
-| Preview does not play | Check browser codec support; download the result and try a local player |
-| Environment changes do not take effect | Restart Uvicorn from the terminal where the variables are configured |
+| 找不到 `uvicorn` 或模块 | 确认已激活虚拟环境，并在项目根目录执行 `python -m pip install -r requirements.txt` |
+| 找不到 FFmpeg / 无法读取媒体 | 检查 `ffmpeg -version`、`ffprobe -version`，安装后重启终端 |
+| API 提示 401 / 403 | 检查本机 Key、对应产品权限和账号状态；不要把完整 Key 发到 Issue |
+| API 提示 429 / 生成超时 | 检查额度、并发与网络；先用短素材验证，确认上游任务状态后再决定是否重新提交 |
+| 浏览器无法播放 | 检查浏览器支持的封装与编码；可以下载到本地播放器检查 |
+| 修改环境变量后仍未生效 | 在配置所在终端重启 Uvicorn |
 
-## Contributing
+## 参与改进
 
-Reproduction steps, sanitized errors, and feature suggestions are welcome. A concrete case—music masking comic dialogue, subtitle drift after dubbing, or an unsuitable musical mood—is especially useful. Include OS, Python / FFmpeg versions, media format, and a minimal workflow. Confirm sharing rights before providing real media.
+欢迎提交复现步骤、已脱敏报错和功能建议。漫剧对白被音乐遮住、译配字幕偏移、音乐情绪不匹配等具体场景，比单纯写“效果不好”更有帮助。请写明系统、Python / FFmpeg 版本、输入格式和最短复现流程；真实素材请先确认分享权限。
 
-Code is provided under the [MIT License](LICENSE). API terms, generated-content rights, media-asset rights, and dependency licenses apply separately.
+代码采用 [MIT License](LICENSE)。API 使用、生成内容、音视频素材与依赖软件的授权另行适用。
 
-## ElevenLabs integration & pricing inquiries
+## AI 视频与漫剧声音工具箱
 
-Maintained by an independent developer, this project gives motion-comic teams, video creators, and builders a practical way to explore ElevenLabs.
+这四个项目可以独立使用，也可以通过导出文件串联。当前需要手动传递文件，并非已实现的一键工作流。
 
-Working on **motion-comic dubbing, short-drama localization, video soundtracks, sound effects, voice products, or batch API integration**? Get in touch to discuss product fit, workflow design, and integration. I can also offer **competitively priced ElevenLabs solutions**; availability, terms, and pricing depend on your requirements and an individual quotation.
+| 你现在遇到的问题 | 对应开源项目 | 主要交付 |
+|---|---|---|
+| 有画面，缺音乐方向 | [AI 音乐导演与视频配乐](https://github.com/lcnwys/elevenlabs-ai-music-video-scoring) | 音乐、编曲计划、创作草案 |
+| 想编排配乐、音效和对白关系 | [AI 视频音频编辑器](https://github.com/lcnwys/elevenlabs-video-audio-studio) | 音频分轨、混音 WAV、工程 JSON |
+| BGM 压住了角色台词 | [Auto Ducking 人声避让](https://github.com/lcnwys/elevenlabs-auto-ducking-video-audio) | 人声避让后的混音视频 |
+| 中文视频需要其他语言版本 | [AI 视频翻译与配音](https://github.com/lcnwys/elevenlabs-video-dubbing-translation) | 译配视频、音频、上游可用字幕 |
 
-**Email: [lcnwys@gmail.com](mailto:lcnwys@gmail.com)**
+例如：完成 AI 画面与对白 → 用音乐导演探索配乐 → 用音频编辑器编排音效 → 导出给剪映等软件完成成片；有其他语言需求时，再单独制作译配版本。
 
-For a useful first conversation, include:
+## 配套学习资源与二次开发
 
-- Your content or product type and a short, sanitized description of the requirement.
-- Estimated monthly audio/video minutes, target languages, team size, and API needs.
-- Whether you are testing a pilot or preparing a launch.
+下面优先提供仓库内可读的源码、配置和样例，方便国内 AI 视频创作者先体验，再逐步理解技术。需要调用真实 AI 能力时，本机网络须能访问对应的 ElevenLabs API；AI 导演还需访问 OpenAI API。项目不内置网络代理或共享 Key。
 
-Do not send API keys, passwords, or unauthorized customer media by email or in public issues. Use issues for product feedback and email for commercial inquiries.
+| 项目内资源 | 能学到 / 复用什么 |
+|---|---|
+| [核心服务源码](app.py) | 创建项目、查询状态、可信下载和本地合成 |
+| [前端页面](static/index.html) | 上传、进度展示、继续查询、预览与下载 |
+| [配置模板](.env.example) | 分清模拟模式、真实模式、大小和时长限制 |
+| [本地流程测试](tests/test_demo.py) | 使用生成素材和模拟接口理解流程，无需真实付费请求 |
 
-> An independent community project, not an official ElevenLabs product. Inquiries and quotations do not imply official endorsement. ElevenLabs names and trademarks belong to their respective owners.
+这是基于 ElevenLabs Dubbing 的本地工作流开发，不是自研翻译或语音生成模型。
+
+### 官方接口参考
+
+| 你想了解什么 | 参考资料 |
+|---|---|
+| 让视频生成音乐 | [ElevenLabs Video-to-Music（英文）](https://elevenlabs.io/docs/api-reference/music/video-to-music) |
+| 编辑音乐段落与计划 | [ElevenLabs Composition Plans（英文）](https://elevenlabs.io/docs/eleven-api/guides/how-to/music/composition-plans) |
+| 提取讲话与词级时间戳 | [ElevenLabs Scribe（英文）](https://elevenlabs.io/docs/api-reference/speech-to-text/convert) |
+| 创建翻译配音项目 | [ElevenLabs Dubbing（英文）](https://elevenlabs.io/docs/api-reference/dubbing/create-project) |
+
+### 一起补充中文创作案例
+
+欢迎在 Issue 中分享已脱敏的 AI 视频、漫剧、动态漫画或短剧声音问题，也欢迎提交经授权的短样片、中文提示词、安装排障和代码改进。建议注明：内容类型、系统环境、素材时长、遇到的问题及期望效果。公开分享前请去掉 Key、私人账号与客户敏感信息。
+
+可以从“我遇到了什么具体问题”开始，不需要先理解所有音频技术。优先从上表中的实际源码、配置与示例入手，再逐步补充适合你的制作流程。
+
+## ElevenLabs 接入与价格咨询
+
+这个项目由独立开发者维护，希望帮助国内 AI 视频、AI 漫剧、动态漫画和短剧制作团队，把声音环节做成可试听、可修改、可复用的实际工作流。
+
+如果你正在做**漫剧配音、短剧出海、视频配乐、音效制作、语音产品或批量 API 集成**，欢迎联系我，一起评估适合的产品、工作流和接入方式。我也可以提供**有价格优势的 ElevenLabs 方案报价**，具体方案、适用条件和价格以实际需求及单独报价为准。
+
+**咨询邮箱：[lcnwys@gmail.com](mailto:lcnwys@gmail.com)**
+
+为了更快给出建议，邮件中可以写明：
+
+- 你在做什么内容或产品，以及一段已脱敏的需求说明。
+- 每月预计视频/音频分钟数、目标语言、团队规模和是否需要 API。
+- 希望先做样片验证，还是正在准备上线。
+
+请不要在邮件或公开 Issue 中发送 API Key、账号密码或未获授权的客户素材。功能问题适合提 Issue；商务和价格咨询请发邮件。
+
+> 这是独立社区项目，并非 ElevenLabs 官方产品。咨询和报价也不代表官方背书；ElevenLabs 的名称和商标归其权利人所有。
